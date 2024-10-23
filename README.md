@@ -24,5 +24,5 @@ Asegúrate de tener instaladas las siguientes herramientas en tu sistema:
 1. Clona este repositorio en tu máquina local:
 
    ```bash
-   git clone https://github.com/tu-usuario/youtube-video-downloader.git
-   cd youtube-video-downloader
+   git clone https://github.com/gpradinett/DownloadVideo.git
+   cd DownloadVideo
