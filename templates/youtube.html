@@ -4,75 +4,147 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Descargar Video de YouTube</title>
+    <!-- CSS de Bootstrap -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
-        table {
+        #progress-bar {
             width: 100%;
-            border-collapse: collapse;
+            background-color: #f3f3f3;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            overflow: hidden;
+            display: none;
         }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
+        #progress {
+            height: 20px;
+            width: 0%;
+            background-color: #4caf50;
             text-align: center;
-        }
-        th {
-            background-color: #f2f2f2;
+            line-height: 20px;
+            color: white;
         }
     </style>
 </head>
 <body>
-    <h1>Descargar Video de YouTube</h1>
+    <div class="container mt-5">
+        <h1 class="text-center">Descargar Video de YouTube</h1>
 
-    <!-- Formulario para ingresar la URL del video -->
-    <form id="video-info-form">
-        <label for="url">URL del Video:</label>
-        <input type="text" id="url" name="url" required>
-        <br>
-        <button type="submit">Obtener información del video</button>
-    </form>
+        <!-- Formulario para ingresar la URL del video -->
+        <form id="video-info-form" class="mt-4">
+            <div class="form-group">
+                <label for="url">URL del Video:</label>
+                <input type="text" id="url" name="url" class="form-control" required>
+            </div>
+            <button type="button" id="paste-clear-btn" class="btn btn-secondary" onclick="handlePasteClear()">Pegar</button>
+            <button type="submit" class="btn btn-primary">Obtener información del video</button>
+            <div id="loading-indicator" class="mt-3" style="display: none;">Cargando información del video...</div>
+            <div id="progress-bar" class="mt-2">
+                <div id="progress">0%</div>
+            </div>
+        </form>
 
-    <!-- Sección para mostrar la información del video -->
-    <div id="video-details" style="display: none;">
-        <h2>Información del Video</h2>
-        <img id="video-thumbnail" src="" alt="Miniatura del Video" style="width: 200px;">
-        <p id="video-title"></p>
+        <!-- Sección para mostrar la información del video -->
+        <div id="video-details" style="display: none;">
+            <h2 class="mt-4">Información del Video</h2>
+            <img id="video-thumbnail" src="" alt="Miniatura del Video" class="img-fluid" style="max-width: 200px;">
+            <p id="video-title"></p>
 
-        <h3>Calidades de Video (MP4)</h3>
-        <table id="video-table">
-            <thead>
-                <tr>
-                    <th>Calidad</th>
-                    <th>Formato</th>
-                    <th>Tamaño</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody id="video-format-rows"></tbody>
-        </table>
+            <h3>Calidades de Video (MP4)</h3>
+            <table id="video-table" class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Calidad</th>
+                        <th>Formato</th>
+                        <th>Tamaño</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="video-format-rows"></tbody>
+            </table>
 
-        <h3>Calidades de Audio (MP3)</h3>
-        <table id="audio-table">
-            <thead>
-                <tr>
-                    <th>Calidad</th>
-                    <th>Formato</th>
-                    <th>Tamaño</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody id="audio-format-rows"></tbody>
-        </table>
+            <h3>Calidades de Audio (MP3)</h3>
+            <table id="audio-table" class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Calidad</th>
+                        <th>Formato</th>
+                        <th>Tamaño</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="audio-format-rows"></tbody>
+            </table>
+        </div>
     </div>
 
+    <!-- jQuery y Bootstrap JS -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
+        // Cambiar el estado del botón entre "Pegar" y "Limpiar"
+        function handlePasteClear() {
+            const urlInput = document.getElementById('url');
+            const pasteClearBtn = document.getElementById('paste-clear-btn');
+
+            if (pasteClearBtn.textContent === 'Pegar') {
+                // Pegar el texto del portapapeles
+                navigator.clipboard.readText().then(text => {
+                    urlInput.value = text;
+                    pasteClearBtn.textContent = 'Limpiar';
+                });
+            } else {
+                // Limpiar el campo de entrada
+                urlInput.value = '';
+                pasteClearBtn.textContent = 'Pegar';
+            }
+        }
+
+        // Cambiar el botón cuando el input cambia manualmente
+        document.getElementById('url').addEventListener('input', function() {
+            const pasteClearBtn = document.getElementById('paste-clear-btn');
+            if (this.value) {
+                pasteClearBtn.textContent = 'Limpiar';
+            } else {
+                pasteClearBtn.textContent = 'Pegar';
+            }
+        });
+
         document.getElementById('video-info-form').addEventListener('submit', async function(event) {
             event.preventDefault();
 
+            // Mostrar el indicador de carga y la barra de progreso
+            const loadingIndicator = document.getElementById('loading-indicator');
+            const progressBar = document.getElementById('progress-bar');
+            const progress = document.getElementById('progress');
+
+            loadingIndicator.style.display = 'block';
+            progressBar.style.display = 'block';
+            progress.style.width = '0%';
+            progress.innerText = '0%';
+
             const url = document.getElementById('url').value;
+
+            // Simulando el progreso en un intervalo
+            let progressValue = 0;
+            const interval = setInterval(() => {
+                if (progressValue < 100) {
+                    progressValue += 20; // Incrementar el progreso
+                    progress.style.width = `${progressValue}%`;
+                    progress.innerText = `${progressValue}%`;
+                } else {
+                    clearInterval(interval); // Detener el intervalo cuando se complete
+                }
+            }, 200); // Cambiar cada 200 ms
 
             const response = await fetch('/video_info/', {
                 method: 'POST',
                 body: new URLSearchParams({ 'url': url })
             });
+
+            clearInterval(interval); // Detener la simulación del progreso
+
+            // Ocultar el indicador de carga y la barra de progreso cuando se recibe la respuesta
+            loadingIndicator.style.display = 'none'; // Ocultar el indicador de carga
 
             if (response.ok) {
                 const data = await response.json();
@@ -85,44 +157,26 @@
                 document.getElementById('video-format-rows').innerHTML = '';
                 document.getElementById('audio-format-rows').innerHTML = '';
 
-                // Filtrar y mostrar calidades de video (MP4)
-                const mp4Formats = data.mp4_formats.reduce((acc, format) => {
-                    const quality = format.quality;
-                    if (!acc[quality] || (format.filesize && (!acc[quality].filesize || format.filesize > acc[quality].filesize))) {
-                        acc[quality] = format;
-                    }
-                    return acc;
-                }, {});
-
-                for (const quality in mp4Formats) {
-                    const format = mp4Formats[quality];
+                // Mostrar calidades de video (MP4)
+                for (const format of data.mp4_formats) {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${format.quality}</td>
                         <td>${format.ext}</td>
                         <td>${format.filesize ? `${(format.filesize / (1024 * 1024)).toFixed(2)} MB` : '--'}</td>
-                        <td><button onclick="downloadVideo('${format.format_id}', '${url}')">Descargar</button></td>
+                        <td><button class="btn btn-success" onclick="downloadVideo('${format.format_id}', '${url}')">Descargar</button></td>
                     `;
                     document.getElementById('video-format-rows').appendChild(row);
                 }
 
-                // Filtrar y mostrar calidades de audio (MP3)
-                const mp3Formats = data.mp3_formats.reduce((acc, format) => {
-                    const quality = format.quality;
-                    if (!acc[quality] || (format.filesize && (!acc[quality].filesize || format.filesize > acc[quality].filesize))) {
-                        acc[quality] = format;
-                    }
-                    return acc;
-                }, {});
-
-                for (const quality in mp3Formats) {
-                    const format = mp3Formats[quality];
+                // Mostrar calidades de audio (MP3)
+                for (const format of data.mp3_formats) {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${format.quality} kbps</td>
-                        <td>${format.ext}</td>
-                        <td>${format.filesize ? `${(format.filesize / (1024 * 1024)).toFixed(2)} MB` : '--'}</td>
-                        <td><button onclick="downloadAudio('${format.format_id}', '${url}')">Descargar</button></td>
+                        <td>mp3</td>
+                        <td>${format.filesize ? '--' : '--'}</td>
+                        <td><button class="btn btn-success" onclick="downloadAudio('${format.quality}', '${url}')">Descargar</button></td>
                     `;
                     document.getElementById('audio-format-rows').appendChild(row);
                 }
@@ -132,6 +186,8 @@
             } else {
                 alert('Error al obtener la información del video.');
             }
+
+            progressBar.style.display = 'none'; // Ocultar la barra de progreso al final
         });
 
         function downloadVideo(formatId, url) {
@@ -152,7 +208,7 @@
             form.submit();
         }
 
-        function downloadAudio(formatId, url) {
+        function downloadAudio(quality, url) {
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '/download/';
@@ -160,12 +216,12 @@
             urlInput.type = 'hidden';
             urlInput.name = 'url';
             urlInput.value = url;
-            const formatInput = document.createElement('input');
-            formatInput.type = 'hidden';
-            formatInput.name = 'format_id';
-            formatInput.value = formatId;
+            const qualityInput = document.createElement('input');
+            qualityInput.type = 'hidden';
+            qualityInput.name = 'quality';
+            qualityInput.value = quality;
             form.appendChild(urlInput);
-            form.appendChild(formatInput);
+            form.appendChild(qualityInput);
             document.body.appendChild(form);
             form.submit();
         }
