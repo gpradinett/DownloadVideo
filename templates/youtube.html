@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Descargar Video de YouTube</title>
-    <!-- CSS de Bootstrap -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
+        #header {
+            background-color: black;
+            color: white;
+            padding: 10px 20px;
+        }
         #progress-bar {
             width: 100%;
             background-color: #f3f3f3;
@@ -24,10 +27,16 @@
             color: white;
         }
     </style>
+    <title>Descargar Video de YouTube</title>
 </head>
 <body>
+    <div id="header" class="d-flex justify-content-between align-items-center">
+        <div class="logo">gpradinett</div>
+        <button class="btn btn-light">Login</button>
+    </div>
+
     <div class="container mt-5">
-        <h1 class="text-center">Descargar Video de YouTube</h1>
+        <h1 class="text-center" style="display: none;">Descargar Video de YouTube</h1>
 
         <!-- Formulario para ingresar la URL del video -->
         <form id="video-info-form" class="mt-4">
@@ -134,7 +143,7 @@
                 } else {
                     clearInterval(interval); // Detener el intervalo cuando se complete
                 }
-            }, 200); // Cambiar cada 200 ms
+            }, 500); // Cambiar cada 200 ms
 
             const response = await fetch('/video_info/', {
                 method: 'POST',
@@ -193,7 +202,7 @@
         function downloadVideo(formatId, url) {
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = '/download/';
+            form.action = '/download/video/';
             const urlInput = document.createElement('input');
             urlInput.type = 'hidden';
             urlInput.name = 'url';
@@ -211,7 +220,7 @@
         function downloadAudio(quality, url) {
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = '/download/';
+            form.action = '/download/audio/';
             const urlInput = document.createElement('input');
             urlInput.type = 'hidden';
             urlInput.name = 'url';
