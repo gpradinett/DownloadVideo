@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Form
+from fastapi import FastAPI, HTTPException, Form, File
 from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
 from fastapi.responses import FileResponse
@@ -7,6 +7,8 @@ import os
 import threading
 import time
 import re
+from fastapi import UploadFile
+
 
 app = FastAPI()
 
@@ -29,6 +31,14 @@ def remove_file(filepath: str):
 async def home(request: Request):
     return templates.TemplateResponse("youtube.html", {"request": request})
 
+@app.get("/tiktok")
+async def tiktok_home(request: Request):
+    return templates.TemplateResponse("tiktok.html", {"request": request})
+
+@app.get("/instagram")
+async def instagram_home(request: Request):
+    return templates.TemplateResponse("instagram.html", {"request": request})
+
 @app.post("/video_info/")
 async def get_video_info(url: str = Form(...)):
     try:
@@ -36,6 +46,7 @@ async def get_video_info(url: str = Form(...)):
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=False)
+            #print(json.dumps(ydl.sanitize_info(info_dict)))
             video_title = info_dict.get('title', 'Video')
             thumbnail_url = info_dict.get('thumbnail')
             formats = info_dict.get('formats')
@@ -95,11 +106,18 @@ async def get_video_info(url: str = Form(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error al obtener la información del video: {str(e)}")
 
-def clean_title(title: str) -> str:
-    """Función que limpia el título del video eliminando caracteres especiales y emojis."""
-    title = re.sub(r'[^\w\s-]', '', title)  # Remover caracteres especiales
-    title = re.sub(r'\s+', '_', title)  # Reemplazar espacios por guiones bajos
-    return title.lower()
+
+def clean_title(title):
+    # Limitar el título a 100 caracteres para evitar errores de longitud
+    title = title[:100]
+    # Reemplazar "#" por "_"
+    title = title.replace("#", "_")
+    # Eliminar emojis y caracteres especiales adicionales
+    title = re.sub(r'[^\w\s-]', '', title)
+    # Reemplazar espacios y guiones múltiples por "_"
+    return re.sub(r'[\s-]+', '_', title)
+
+
 
 @app.post("/download/video/")
 async def download_video(url: str = Form(...), format_id: str = Form(None)):
@@ -173,6 +191,101 @@ async def download_audio(url: str = Form(...), quality: int = Form(None)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error al descargar el audio: {str(e)}")
 
+@app.post("/download/tiktok/")
+async def download_tiktok_video(url: str = Form(...)):
+    try:
+        print(f"URL recibida para descarga: {url}")  # Log de URL en el servidor
+
+        with yt_dlp.YoutubeDL({'noplaylist': True}) as ydl:
+            info_dict = ydl.extract_info(url, download=False)
+            video_title = info_dict.get('title', 'TikTok Video')
+            clean_video_title = clean_title(video_title)
+            print(f"Título limpio del video: {clean_video_title}")
+
+        ydl_opts = {
+            'format': 'best',
+            'outtmpl': f'{DOWNLOAD_PATH}/{clean_video_title}.%(ext)s',
+            'geo_bypass': True,
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+            video_file = f"{DOWNLOAD_PATH}/{clean_video_title}.mp4"
+            print(f"Video descargado como: {video_file}")
+
+        if not os.path.isfile(video_file):
+            print("Error: archivo no encontrado después de la descarga")
+            raise HTTPException(status_code=404, detail="El archivo no se encontró después de la descarga.")
+
+        print("Preparando respuesta para enviar el archivo al cliente")
+        response = FileResponse(video_file, media_type="video/mp4", filename=f"{clean_video_title}.mp4")
+
+        threading.Thread(target=remove_file, args=(video_file,)).start()
+        print("Hilo para eliminación del archivo creado")
+
+        return response
+
+    except Exception as e:
+        print(f"Error durante la descarga o envío: {str(e)}")  # Log de error en el servidor
+        raise HTTPException(status_code=400, detail=f"Error al descargar el video de TikTok: {str(e)}")
+
+@app.post("/download/instagram/")
+async def download_instagram_video(url: str = Form(...)):
+    try:
+        print(f"URL recibida para descarga de Instagram: {url}")
+
+        # Ruta al archivo de cookies en el servidor
+        cookies_file_path = f"{DOWNLOAD_PATH}/cookies.txt"
+
+        # Verificar que el archivo de cookies exista y tenga contenido
+        if not os.path.isfile(cookies_file_path):
+            raise HTTPException(status_code=404, detail="El archivo de cookies no se encontró.")
+
+        # Configuración para yt-dlp
+        ydl_opts = {
+            'format': 'best',
+            'outtmpl': f'{DOWNLOAD_PATH}/%(title)s.%(ext)s',
+            'geo_bypass': True,
+            'cookiefile': cookies_file_path,  # Asegúrate de que este archivo es accesible
+        }
+
+        # Extraer información del video
+        with yt_dlp.YoutubeDL({'noplaylist': True}) as ydl:
+            info_dict = ydl.extract_info(url, download=False)
+            video_title = info_dict.get('title', 'Instagram Video')
+            clean_video_title = clean_title(video_title)
+            print(f"Título limpio del video: {clean_video_title}")
+
+        # Actualizar la plantilla de salida con el título limpio
+        ydl_opts['outtmpl'] = f'{DOWNLOAD_PATH}/{clean_video_title}.%(ext)s'
+
+        # Descargar el video
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+            video_file = f"{DOWNLOAD_PATH}/{clean_video_title}.mp4"
+            print(f"Video descargado como: {video_file}")
+
+        # Verificar si el archivo fue creado
+        if not os.path.isfile(video_file):
+            print("Error: archivo no encontrado después de la descarga")
+            raise HTTPException(status_code=404, detail="El archivo no se encontró después de la descarga.")
+
+        print("Preparando respuesta para enviar el archivo al cliente")
+        response = FileResponse(video_file, media_type="video/mp4", filename=f"{clean_video_title}.mp4")
+
+        # Crear un hilo para eliminar el archivo después de enviarlo
+        threading.Thread(target=remove_file, args=(video_file,)).start()
+        print("Hilo para eliminación del archivo creado")
+
+        return response
+
+    except Exception as e:
+        print(f"Error durante la descarga o envío: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error al descargar el video de Instagram: {str(e)}")
+
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
