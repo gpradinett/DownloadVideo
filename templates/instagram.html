@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Descargar Video de Instagram</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Descargar Video de Instagram</h1>
+        <form id="instagram-form" action="/download/instagram/" method="post">
+            <div class="form-group">
+                <label for="url">URL del Video de Instagram:</label>
+                <input type="url" id="url" name="url" class="form-control" placeholder="Ingrese la URL del video de Instagram" required>
+            </div>
+            <div class="form-group">
+                <label for="cookies">Cookies de Instagram:</label>
+                <textarea id="cookies" name="cookies" class="form-control" rows="5" placeholder="Ingrese las cookies de sesión de Instagram" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Descargar Video</button>
+        </form>
+        <div id="download-info" class="mt-3"></div>
+    </div>
+
+    <script>
+        document.getElementById('instagram-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const url = document.getElementById('url').value;
+            const cookies = document.getElementById('cookies').value;
+            const formData = new FormData();
+            formData.append('url', url);
+            formData.append('cookies', cookies);
+
+            const response = await fetch('/download/instagram/', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = 'instagram_video.mp4';
+                document.getElementById('download-info').innerHTML = "¡Descarga en curso!";
+                link.click();
+                window.URL.revokeObjectURL(downloadUrl);
+            } else {
+                document.getElementById('download-info').innerHTML = "Error al descargar el video.";
+            }
+        });
+    </script>
+</body>
+</html>
