@@ -42,7 +42,15 @@ async def instagram_home(request: Request):
 @app.post("/video_info/")
 async def get_video_info(url: str = Form(...)):
     try:
-        ydl_opts = {'noplaylist': True}
+        ydl_opts = {
+            "noplaylist": True,
+            "http_headers": {
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/114.0.0.0 Safari/537.36"
+                )
+            },
+        }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=False)
