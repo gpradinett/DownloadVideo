@@ -292,8 +292,7 @@ async def download_instagram_video(url: str = Form(...)):
         raise HTTPException(status_code=400, detail=f"Error al descargar el video de Instagram: {str(e)}")
 
 
-
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-
+    port = int(os.getenv("PORT", 8000))  # Usa el puerto de Render o 8000 por defecto
+    uvicorn.run(app, host="0.0.0.0", port=port)
